@@ -6,6 +6,16 @@ import { Scoreboard } from './components/Scoreboard';
 import { Modal } from './components/Modal';
 import { BoardState, Winner } from './types';
 
+// Define the type for the BeforeInstallPromptEvent
+interface BeforeInstallPromptEvent extends Event {
+  readonly platforms: string[];
+  readonly userChoice: Promise<{
+    outcome: 'accepted' | 'dismissed';
+    platform: string;
+  }>;
+  prompt(): Promise<void>;
+}
+
 const INITIAL_BOARD: BoardState = Array(9).fill(null);
 const INITIAL_SCORES = { X: 0, O: 0 };
 
@@ -37,6 +47,30 @@ const App: React.FC = () => {
   const [isXNext, setIsXNext] = useState<boolean>(true);
   const [scores, setScores] = useState<{ X: number; O: number }>(INITIAL_SCORES);
   const [winnerInfo, setWinnerInfo] = useState<{ winner: Winner, line: number[] | null }>({ winner: null, line: null });
+  const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e: Event) => {
+      e.preventDefault();
+      setInstallPrompt(e as BeforeInstallPromptEvent);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    };
+  }, []);
+
+  useEffect(() => {
+    const handleAppInstalled = () => {
+      setInstallPrompt(null);
+    };
+    window.addEventListener('appinstalled', handleAppInstalled);
+    return () => {
+      window.removeEventListener('appinstalled', handleAppInstalled);
+    };
+  }, []);
 
   useEffect(() => {
     const newWinnerInfo = calculateWinner(board);
@@ -70,6 +104,13 @@ const App: React.FC = () => {
     playAgain();
     setScores(INITIAL_SCORES);
   }, [playAgain]);
+
+  const handleInstallClick = async () => {
+    if (!installPrompt) {
+      return;
+    }
+    await installPrompt.prompt();
+  };
   
   return (
     <div className="min-h-screen bg-slate-900 text-white flex flex-col items-center justify-center p-4">
@@ -89,7 +130,16 @@ const App: React.FC = () => {
             <Board board={board} onSquareClick={handleSquareClick} winningLine={winnerInfo.line} />
         </div>
         
-        <div className="mt-8">
+        <div className="mt-8 flex flex-col sm:flex-row gap-4 items-center justify-center">
+            {installPrompt && (
+              <button
+                onClick={handleInstallClick}
+                className="bg-teal-600 hover:bg-teal-500 text-white font-bold py-2 px-6 rounded-lg transition-transform transform hover:scale-105"
+                aria-label="Install app"
+              >
+                Install App
+              </button>
+            )}
             <button
                 onClick={restartGame}
                 className="bg-red-600 hover:bg-red-500 text-white font-bold py-2 px-6 rounded-lg transition-transform transform hover:scale-105"
