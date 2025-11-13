@@ -1,0 +1,5 @@
+{
+  "name": "Tic Tac Toe PWA",
+  "description": "A classic Tic-Tac-Toe (Tateti) game built as a Progressive Web App, enabling offline play with a modern UI.",
+  "requestFramePermissions": []
+}
